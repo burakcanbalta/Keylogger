@@ -69,7 +69,7 @@ pip install pynput pyperclip pyautogui psutil pygetwindow cryptography pillow
 
 ---
 
-## ⚠️ Legal Disclaimer
+## ⚠️ Legal Disclaimer !!!!!:))))))
 
 This tool is intended **strictly for educational use**, penetration testing with proper authorization, or Red Team simulation in lab environments.
 
